@@ -124,30 +124,43 @@ public class RNFSManager extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void readFile(String filepath, Promise promise) {
-    try {
-      File file = new File(filepath);
-
-      if (file.isDirectory()) {
-        rejectFileIsDirectory(promise);
-        return;
+      try {
+          Uri uri = Uri.parse(filepath);
+          
+          if (uri.getScheme() == null && !filepath.contains("file://")) {
+              uri = Uri.parse("file://" + filepath);
+          }
+          
+          if (filepath.contains("content://")) {
+              byte[] inputData = getBytes(mReactContext, uri);
+              String base64Content = Base64.encodeToString(inputData, Base64.NO_WRAP);
+              promise.resolve(base64Content);
+          } else {
+              File file = new File(uri.getPath());
+              
+              if (file.isDirectory()) {
+                  rejectFileIsDirectory(promise);
+                  return;
+              }
+              
+              if (!file.exists()) {
+                  rejectFileNotFound(promise, filepath);
+                  return;
+              }
+              
+              FileInputStream inputStream = new FileInputStream(filepath);
+              byte[] buffer = new byte[(int)file.length()];
+              inputStream.read(buffer);
+              
+              String base64Content = Base64.encodeToString(buffer, Base64.NO_WRAP);
+              
+              promise.resolve(base64Content);
+          }
+          
+      } catch (Exception ex) {
+          ex.printStackTrace();
+          reject(promise, filepath, ex);
       }
-
-      if (!file.exists()) {
-        rejectFileNotFound(promise, filepath);
-        return;
-      }
-
-      FileInputStream inputStream = new FileInputStream(filepath);
-      byte[] buffer = new byte[(int)file.length()];
-      inputStream.read(buffer);
-
-      String base64Content = Base64.encodeToString(buffer, Base64.NO_WRAP);
-
-      promise.resolve(base64Content);
-    } catch (Exception ex) {
-      ex.printStackTrace();
-      reject(promise, filepath, ex);
-    }
   }
 
   @ReactMethod
@@ -721,4 +734,34 @@ public class RNFSManager extends ReactContextBaseJavaModule {
 
     return constants;
   }
+    
+    
+    private byte[] getBytes(Context context, Uri uri) throws IOException {
+        InputStream iStream = context.getContentResolver().openInputStream(uri);
+        try {
+            return getBytes(iStream);
+        } finally {
+            try {
+                iStream.close();
+            } catch (IOException ignored) { /* do nothing */ }
+        }
+    }
+    
+    private byte[] getBytes(InputStream inputStream) throws IOException {
+        byte[] bytesResult = null;
+        ByteArrayOutputStream byteBuffer = new ByteArrayOutputStream();
+        int bufferSize = 1024;
+        byte[] buffer = new byte[bufferSize];
+        try {
+            int len;
+            while ((len = inputStream.read(buffer)) != -1) {
+                byteBuffer.write(buffer, 0, len);
+            }
+            bytesResult = byteBuffer.toByteArray();
+        } finally {
+            try{ byteBuffer.close(); } catch (IOException ignored){ /* do nothing */ }
+        }
+        
+        return bytesResult;
+    }
 }
