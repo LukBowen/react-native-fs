@@ -1,7 +1,9 @@
 package com.rnfs;
 
+import android.content.Context;
 import android.content.res.AssetFileDescriptor;
 import android.content.res.AssetManager;
+import android.net.Uri;
 import android.os.Environment;
 import android.os.StatFs;
 import android.support.annotation.Nullable;
@@ -19,6 +21,7 @@ import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.modules.core.RCTNativeAppEventEmitter;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -46,9 +49,11 @@ public class RNFSManager extends ReactContextBaseJavaModule {
   private static final String RNFSFileTypeDirectory = "RNFSFileTypeDirectory";
 
   private SparseArray<Downloader> downloaders = new SparseArray<Downloader>();
+  private Context mReactContext;
 
   public RNFSManager(ReactApplicationContext reactContext) {
     super(reactContext);
+    mReactContext = reactContext;
   }
 
   @Override
@@ -149,8 +154,7 @@ public class RNFSManager extends ReactContextBaseJavaModule {
               }
               
               FileInputStream inputStream = new FileInputStream(filepath);
-              byte[] buffer = new byte[(int)file.length()];
-              inputStream.read(buffer);
+              byte[] buffer = getBytes(inputStream);
               
               String base64Content = Base64.encodeToString(buffer, Base64.NO_WRAP);
               
