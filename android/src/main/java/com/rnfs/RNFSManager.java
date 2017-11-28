@@ -142,12 +142,12 @@ public class RNFSManager extends ReactContextBaseJavaModule {
               promise.resolve(base64Content);
           } else {
               File file = new File(uri.getPath());
-              
+
               if (file.isDirectory()) {
                   rejectFileIsDirectory(promise);
                   return;
               }
-              
+
               if (!file.exists()) {
                   rejectFileNotFound(promise, filepath);
                   return;
@@ -155,7 +155,7 @@ public class RNFSManager extends ReactContextBaseJavaModule {
               
               FileInputStream inputStream = new FileInputStream(filepath);
               byte[] buffer = getBytes(inputStream);
-              
+
               String base64Content = Base64.encodeToString(buffer, Base64.NO_WRAP);
               
               promise.resolve(base64Content);
@@ -208,10 +208,9 @@ public class RNFSManager extends ReactContextBaseJavaModule {
         return;
       }
 
-      byte[] buffer = new byte[stream.available()];
-      stream.read(buffer);
+      byte[] buffer = getBytes(stream);
       String base64Content = Base64.encodeToString(buffer, Base64.NO_WRAP);
-      promise.resolve(base64Content);;
+      promise.resolve(base64Content);
     } catch (Exception ex) {
       ex.printStackTrace();
       reject(promise, filepath, ex);
