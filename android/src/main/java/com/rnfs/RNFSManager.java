@@ -131,35 +131,38 @@ public class RNFSManager extends ReactContextBaseJavaModule {
   public void readFile(String filepath, Promise promise) {
       try {
           Uri uri = Uri.parse(filepath);
-          
-          if (uri.getScheme() == null && !filepath.contains("file://")) {
-              uri = Uri.parse("file://" + filepath);
-          }
-          
-          if (filepath.contains("content://")) {
-              byte[] inputData = getBytes(mReactContext, uri);
-              String base64Content = Base64.encodeToString(inputData, Base64.NO_WRAP);
-              promise.resolve(base64Content);
-          } else {
-              File file = new File(uri.getPath());
 
-              if (file.isDirectory()) {
-                  rejectFileIsDirectory(promise);
-                  return;
+          /*
+              Uri.getScheme() returns the file, content, http, etc... prefix,
+              If it is null than we can append safely append a scheme
+          */
+          if (uri.getScheme() == null) {
+              //Safety checks
+              if (filepath.contains("://")) {
+                  uri = Uri.parse("file" + filepath);
+              } else if (filepath.contains("//")) {
+                  uri = Uri.parse("file:" + filepath);
+              } else {
+                  //This should be executed 99.9% of the time.
+                  uri = Uri.parse("file://" + filepath);
               }
-
-              if (!file.exists()) {
-                  rejectFileNotFound(promise, filepath);
-                  return;
-              }
-              
-              FileInputStream inputStream = new FileInputStream(filepath);
-              byte[] buffer = getBytes(inputStream);
-
-              String base64Content = Base64.encodeToString(buffer, Base64.NO_WRAP);
-              
-              promise.resolve(base64Content);
           }
+
+          File file = new File(uri.getPath());
+
+          if (file.isDirectory()) {
+              rejectFileIsDirectory(promise);
+              return;
+          }
+
+          if (!file.exists()) {
+              rejectFileNotFound(promise, filepath);
+              return;
+          }
+
+          byte[] inputData = getBytes(mReactContext, uri);
+          String base64Content = Base64.encodeToString(inputData, Base64.NO_WRAP);
+          promise.resolve(base64Content);
           
       } catch (Exception ex) {
           ex.printStackTrace();
